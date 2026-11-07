@@ -1,11 +1,19 @@
 import React from 'react';
 import { DecorativeHeader } from './components/DecorativeHeader';
 import { Navbar } from './components/Navbar';
+import { Hero } from './components/Hero';
 import { DogViewer } from './components/DogViewer';
 import { Sparkles, Globe } from 'lucide-react';
 import './App.css';
 
 export const App: React.FC = () => {
+  const handleScrollToExplorer = () => {
+    const el = document.getElementById('explorer');
+    if (el) {
+      el.scrollIntoView({ behavior: 'smooth' });
+    }
+  };
+
   return (
     <div className="site-wrapper">
       {/* Playful Giant Bubble Header */}
@@ -32,7 +40,10 @@ export const App: React.FC = () => {
         </header>
 
         {/* Playful Navigation Bar */}
-        <Navbar />
+        <Navbar onNavigate={(id) => {
+          const el = document.getElementById(id);
+          if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }} />
 
         {/* Ticker Banner */}
         <section className="ticker-banner" aria-label="Welcome Announcement">
@@ -48,8 +59,13 @@ export const App: React.FC = () => {
           </div>
         </section>
 
-        {/* Temporary existing viewer until later commits */}
-        <DogViewer />
+        {/* Hero Section */}
+        <Hero onExploreClick={handleScrollToExplorer} />
+
+        {/* Main Content Area */}
+        <div id="explorer">
+          <DogViewer />
+        </div>
       </main>
     </div>
   );
