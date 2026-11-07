@@ -1,3 +1,49 @@
+/**
+ * TypeScript Interfaces for Dog CEO API & Breed Management
+ */
+
+export interface DogBreedsApiResponse {
+  message: Record<string, string[]>;
+  status: 'success' | 'error';
+}
+
+export interface DogImageApiResponse {
+  message: string;
+  status: 'success' | 'error';
+}
+
+export interface DogMultipleImagesApiResponse {
+  message: string[];
+  status: 'success' | 'error';
+}
+
+export interface BreedOption {
+  id: string; // e.g. "shihtzu", "retriever-golden"
+  breed: string; // e.g. "shihtzu", "retriever"
+  subBreed?: string; // e.g. "golden"
+  displayName: string; // e.g. "Shih Tzu", "Golden Retriever"
+  apiPath: string; // e.g. "shihtzu", "retriever/golden"
+}
+
+export interface DogImageState {
+  url: string;
+  breedId: string;
+  breedName: string;
+}
+
+export interface FeaturedBreedCard {
+  id: string;
+  breed: string;
+  subBreed?: string;
+  displayName: string;
+  apiPath: string;
+  description: string;
+  tag: string;
+  badgeColor: 'pink' | 'yellow' | 'mint' | 'lavender' | 'blue';
+  sampleImageUrl?: string;
+}
+
+// Legacy compatibility types during transition
 export interface BreedImage {
   id: string;
   url: string;
@@ -9,9 +55,6 @@ export interface BreedImage {
 export interface BreedAttributes {
   name: string;
   description: string;
-  life?: { min: number; max: number };
-  male_weight?: { min: number; max: number };
-  female_weight?: { min: number; max: number };
   hypoallergenic: boolean;
   images?: BreedImage[];
 }
@@ -24,12 +67,5 @@ export interface BreedData {
 
 export interface BreedCollectionResponse {
   data: BreedData[];
-  meta: {
-    pagination: {
-      current: number;
-      next?: number;
-      last: number;
-      records: number;
-    };
-  };
 }
+
