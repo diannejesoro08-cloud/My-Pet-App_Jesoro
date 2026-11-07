@@ -1,17 +1,26 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { DecorativeHeader } from './components/DecorativeHeader';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
 import { DogExplorer } from './components/DogExplorer';
+import { FeaturedBreeds } from './components/FeaturedBreeds';
+import { About } from './components/About';
+import { Footer } from './components/Footer';
 import { Sparkles, Globe } from 'lucide-react';
 import './App.css';
 
 export const App: React.FC = () => {
+  const [selectedBreedId, setSelectedBreedId] = useState<string>('');
+
   const handleScrollToExplorer = () => {
     const el = document.getElementById('explorer');
     if (el) {
       el.scrollIntoView({ behavior: 'smooth' });
     }
+  };
+
+  const handleSelectFeatured = (breedId: string) => {
+    setSelectedBreedId(breedId);
   };
 
   return (
@@ -63,7 +72,19 @@ export const App: React.FC = () => {
         <Hero onExploreClick={handleScrollToExplorer} />
 
         {/* Dog Breed Explorer Section */}
-        <DogExplorer />
+        <DogExplorer 
+          selectedBreedId={selectedBreedId}
+          onSelectBreed={setSelectedBreedId}
+        />
+
+        {/* Featured Breeds Section */}
+        <FeaturedBreeds onSelectFeaturedBreed={handleSelectFeatured} />
+
+        {/* About Section */}
+        <About />
+
+        {/* Footer */}
+        <Footer />
       </main>
     </div>
   );

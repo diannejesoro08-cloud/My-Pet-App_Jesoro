@@ -1,70 +1,28 @@
-import React, { useState, useEffect, useCallback, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { BreedSelector } from './BreedSelector';
 import { DogImage } from './DogImage';
 import { fetchAllBreeds, fetchRandomDogImage } from '../services/dogApi';
 import type { BreedOption } from '../types/dog';
 import { Sparkles, RefreshCw, Bone, Camera } from 'lucide-react';
 
-export const DogExplorer: React.FC = () => {
+interface DogExplorerProps {
+  selectedBreedId: string;
+  onSelectBreed: (breedId: string) => void;
+}
+
+export const DogExplorer: React.FC<DogExplorerProps> = ({
+  selectedBreedId,
+  onSelectBreed,
+}) => {
   const [breeds, setBreeds] = useState<BreedOption[]>([]);
-  const [selectedBreedId, setSelectedBreedId] = useState<string>('');
   const [imageUrl, setImageUrl] = useState<string | null>(null);
   const [loadingBreeds, setLoadingBreeds] = useState<boolean>(true);
   const [loadingImage, setLoadingImage] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
-  const [photosFetchedForBreed, setPhotosFetchedForBreed] = useState<number>(1);
-
-  // Active breed reference to strictly lock image requests to the selected breed
-  const activeBreedRef = useRef<BreedOption | null>(null);
-  // Guard flag to strictly prevent duplicate or overlapping concurrent network requests
-  const isRequestInProgressRef = useRef<boolean>(false);
+  const [photosFetchedCount, setPhotosFetchedCount] = useState<number>(1);
 
   // Find currently selected breed object
   const currentBreed = breeds.find((b) => b.id === selectedBreedId) || null;
-
-  useEffect(() => {
-    activeBreedRef.current = currentBreed;
-  }, [currentBreed]);
-
-  /**
-   * Load image for a specific breed with strict concurrency locks
-   * and breed invariance guarantee.
-   */
-  const loadBreedImage = useCallback(async (targetBreed: BreedOption, isNewFetch = false) => {
-    if (!targetBreed || isRequestInProgressRef.current) return;
-
-    isRequestInProgressRef.current = true;
-    setLoadingImage(true);
-    setError(null);
-
-    try {
-      // Dog CEO API endpoint for the exact selected breed path
-      const url = await fetchRandomDogImage(targetBreed.apiPath);
-
-      // Verify that the user did not switch breeds while this fetch was pending
-      if (activeBreedRef.current?.id === targetBreed.id) {
-        setImageUrl(url);
-        if (isNewFetch) {
-          setPhotosFetchedForBreed((prev) => prev + 1);
-        } else {
-          setPhotosFetchedForBreed(1);
-        }
-      }
-    } catch (err) {
-      if (activeBreedRef.current?.id === targetBreed.id) {
-        const errorMsg =
-          err instanceof Error
-            ? err.message
-            : "Oops! We couldn't find a photo right now. Please try again.";
-        setError(errorMsg);
-      }
-    } finally {
-      if (activeBreedRef.current?.id === targetBreed.id) {
-        setLoadingImage(false);
-      }
-      isRequestInProgressRef.current = false;
-    }
-  }, []);
 
   /**
    * Initial load: fetch all breeds from Dog CEO API
@@ -72,72 +30,100 @@ export const DogExplorer: React.FC = () => {
   useEffect(() => {
     let isMounted = true;
 
-    const initializeBreeds = async () => {
-      setLoadingBreeds(true);
-      setError(null);
-
-      try {
-        const breedList = await fetchAllBreeds();
+    fetchAllBreeds()
+      .then((breedList) => {
         if (!isMounted) return;
-
         setBreeds(breedList);
+        setLoadingBreeds(false);
 
-        if (breedList.length > 0) {
-          // Select Shih Tzu by default to fulfill prompt emphasis, or first breed
+        // If no breed selected yet, default to Shih Tzu or first breed
+        if (breedList.length > 0 && !selectedBreedId) {
           const defaultBreed =
             breedList.find((b) => b.id === 'shihtzu') || breedList[0];
-
-          setSelectedBreedId(defaultBreed.id);
-          activeBreedRef.current = defaultBreed;
-          await loadBreedImage(defaultBreed, false);
+          onSelectBreed(defaultBreed.id);
         }
-      } catch (err) {
-        if (isMounted) {
-          const msg =
-            err instanceof Error
-              ? err.message
-              : 'Failed to load dog breeds list from Dog CEO API.';
-          setError(msg);
-        }
-      } finally {
-        if (isMounted) {
-          setLoadingBreeds(false);
-        }
-      }
-    };
-
-    initializeBreeds();
+      })
+      .catch((err: unknown) => {
+        if (!isMounted) return;
+        const msg =
+          err instanceof Error
+            ? err.message
+            : 'Failed to load dog breeds list from Dog CEO API.';
+        setError(msg);
+        setLoadingBreeds(false);
+      });
 
     return () => {
       isMounted = false;
     };
-  }, [loadBreedImage]);
+  }, [onSelectBreed, selectedBreedId]);
 
   /**
-   * Handler when user selects a different breed from dropdown
+   * When selectedBreedId changes, fetch a random image for that breed
    */
-  const handleSelectBreed = (breedId: string) => {
-    // If request is in progress or same breed clicked, handle gracefully
+  useEffect(() => {
+    if (!selectedBreedId || breeds.length === 0) return;
+
+    const targetBreed = breeds.find((b) => b.id === selectedBreedId);
+    if (!targetBreed) return;
+
+    let isMounted = true;
+
+    fetchRandomDogImage(targetBreed.apiPath)
+      .then((url) => {
+        if (isMounted) {
+          setImageUrl(url);
+          setLoadingImage(false);
+        }
+      })
+      .catch((err: unknown) => {
+        if (isMounted) {
+          const msg =
+            err instanceof Error
+              ? err.message
+              : "Oops! We couldn't find a photo right now. Please try again.";
+          setError(msg);
+          setLoadingImage(false);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedBreedId, breeds]);
+
+  const handleDropdownSelect = (breedId: string) => {
     if (breedId === selectedBreedId) return;
-
-    const breed = breeds.find((b) => b.id === breedId);
-    if (!breed) return;
-
-    // Reset photo counter for new breed
-    setPhotosFetchedForBreed(1);
-    setSelectedBreedId(breed.id);
-    activeBreedRef.current = breed;
-    loadBreedImage(breed, false);
+    setLoadingImage(true);
+    setError(null);
+    setPhotosFetchedCount(1);
+    onSelectBreed(breedId);
   };
 
   /**
    * CRITICAL REQUIREMENT:
-   * When Fetch Another Photo is clicked, it MUST fetch another random photo
+   * When Fetch Another Photo is clicked, it MUST request another random image
    * of the currently selected breed. The selected breed MUST NOT change!
    */
-  const handleFetchAnotherPhoto = () => {
-    if (!currentBreed || loadingImage || isRequestInProgressRef.current) return;
-    loadBreedImage(currentBreed, true);
+  const handleFetchAnotherPhoto = async () => {
+    if (!currentBreed || loadingImage) return;
+
+    setLoadingImage(true);
+    setError(null);
+
+    try {
+      const url = await fetchRandomDogImage(currentBreed.apiPath);
+      setImageUrl(url);
+      setPhotosFetchedCount((prev) => prev + 1);
+    } catch (err: unknown) {
+      const msg =
+        err instanceof Error
+          ? err.message
+          : "Oops! We couldn't find a photo right now. Please try again.";
+      setError(msg);
+    } finally {
+      setLoadingImage(false);
+    }
   };
 
   return (
@@ -162,7 +148,7 @@ export const DogExplorer: React.FC = () => {
           <BreedSelector
             breeds={breeds}
             selectedBreedId={selectedBreedId}
-            onSelectBreed={handleSelectBreed}
+            onSelectBreed={handleDropdownSelect}
             disabled={loadingBreeds || loadingImage}
           />
         </div>
@@ -173,7 +159,7 @@ export const DogExplorer: React.FC = () => {
           breedName={currentBreed ? currentBreed.displayName : ''}
           loading={loadingImage || loadingBreeds}
           error={error}
-          onRetry={() => currentBreed && loadBreedImage(currentBreed, false)}
+          onRetry={handleFetchAnotherPhoto}
         />
 
         {/* Fetch Button Action Row */}
@@ -199,7 +185,7 @@ export const DogExplorer: React.FC = () => {
             <span className="badge-pill pink photo-counter-badge">
               <Camera size={13} />
               <span>
-                {currentBreed ? currentBreed.displayName : 'Breed'} Photo #{photosFetchedForBreed}
+                {currentBreed ? currentBreed.displayName : 'Breed'} Photo #{photosFetchedCount}
               </span>
             </span>
             <p className="fetch-indicator-note">
