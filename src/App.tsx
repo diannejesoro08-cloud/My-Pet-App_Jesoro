@@ -2,7 +2,7 @@ import React from 'react';
 import { DecorativeHeader } from './components/DecorativeHeader';
 import { Navbar } from './components/Navbar';
 import { Hero } from './components/Hero';
-import { DogViewer } from './components/DogViewer';
+import { DogExplorer } from './components/DogExplorer';
 import { Sparkles, Globe } from 'lucide-react';
 import './App.css';
 
@@ -62,10 +62,8 @@ export const App: React.FC = () => {
         {/* Hero Section */}
         <Hero onExploreClick={handleScrollToExplorer} />
 
-        {/* Main Content Area */}
-        <div id="explorer">
-          <DogViewer />
-        </div>
+        {/* Dog Breed Explorer Section */}
+        <DogExplorer />
       </main>
     </div>
   );
