@@ -1623,12 +1623,119 @@
   opacity: 0.5;
 }
 
-@media (max-width: 820px) {
+/* ==========================================================================
+   RESPONSIVE LAYOUT & POLISHED BREAKPOINTS
+   ========================================================================== */
+
+@media (max-width: 900px) {
+  .site-wrapper {
+    padding: 20px 12px 48px 12px;
+  }
+  .footer-top-row {
+    grid-template-columns: 1fr 1fr;
+    gap: 28px;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-wrapper {
+    padding: 12px 8px 36px 8px;
+  }
+
+  .browser-window {
+    border-radius: var(--radius-md);
+    box-shadow: 5px 5px 0px var(--color-outline);
+    border-width: 2.5px;
+  }
+
+  .browser-titlebar {
+    padding: 10px 14px;
+  }
+
+  .browser-url-pill {
+    font-size: 11px;
+    padding: 3px 14px;
+  }
+
+  .bubble-brand-container {
+    gap: 6px;
+  }
+
+  .bubble-letter {
+    border-radius: 16px;
+    box-shadow: 3px 3px 0px var(--color-outline);
+    border-width: 2.5px;
+  }
+
+  .playful-cursor {
+    display: none;
+  }
+
+  .hero-mascot-pill {
+    display: none;
+  }
+
+  .hero-content-box {
+    padding: 28px 16px;
+  }
+
+  .hero-highlights-strip {
+    gap: 14px;
+  }
+
+  .explorer-card {
+    padding: 20px 14px;
+    border-radius: var(--radius-lg);
+    box-shadow: 5px 5px 0px var(--color-outline);
+  }
+
+  .dog-photo-frame {
+    max-height: 340px;
+    border-radius: var(--radius-md);
+  }
+
+  .fetch-photo-button {
+    width: 100%;
+    font-size: 16px;
+    padding: 14px 20px;
+  }
+
+  .featured-cards-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .about-feature-grid {
+    grid-template-columns: 1fr;
+  }
+
   .footer-top-row {
     grid-template-columns: 1fr;
     gap: 24px;
   }
+
+  .footer-bottom-bar {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 16px;
+  }
 }
+
+@media (max-width: 380px) {
+  .bubble-word {
+    gap: 2px;
+  }
+  .bubble-letter {
+    width: 38px;
+    height: 44px;
+    font-size: 26px;
+  }
+  .bubble-centerpiece svg {
+    width: 38px;
+    height: 38px;
+  }
+}
+
 
 
 

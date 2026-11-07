@@ -84,6 +84,33 @@ body {
   overflow-x: hidden;
 }
 
+/* Custom Playful Pastel Scrollbar */
+::-webkit-scrollbar {
+  width: 12px;
+  height: 12px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color-lavender-bg);
+  border-left: 2px solid var(--color-outline);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color-butter-yellow);
+  border: 2px solid var(--color-outline);
+  border-radius: var(--radius-pill);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color-baby-pink);
+}
+
+/* Accessibility Focus Ring */
+:focus-visible {
+  outline: 3px solid var(--color-deep-blue);
+  outline-offset: 3px;
+}
+
 /* Base button and input resets */
 button, select, input, textarea {
   font-family: inherit;
