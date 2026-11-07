@@ -3,7 +3,7 @@ import { BreedSelector } from './BreedSelector';
 import { DogImage } from './DogImage';
 import { fetchAllBreeds, fetchRandomDogImage } from '../services/dogApi';
 import type { BreedOption } from '../types/dog';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { Sparkles, RefreshCw, Bone, Camera } from 'lucide-react';
 
 export const DogExplorer: React.FC = () => {
   const [breeds, setBreeds] = useState<BreedOption[]>([]);
@@ -12,9 +12,12 @@ export const DogExplorer: React.FC = () => {
   const [loadingBreeds, setLoadingBreeds] = useState<boolean>(true);
   const [loadingImage, setLoadingImage] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [photosFetchedForBreed, setPhotosFetchedForBreed] = useState<number>(1);
 
-  // Keep a reference to the active breed path to guarantee fetch requests never switch breeds
+  // Active breed reference to strictly lock image requests to the selected breed
   const activeBreedRef = useRef<BreedOption | null>(null);
+  // Guard flag to strictly prevent duplicate or overlapping concurrent network requests
+  const isRequestInProgressRef = useRef<boolean>(false);
 
   // Find currently selected breed object
   const currentBreed = breeds.find((b) => b.id === selectedBreedId) || null;
@@ -24,27 +27,42 @@ export const DogExplorer: React.FC = () => {
   }, [currentBreed]);
 
   /**
-   * Load image for a specific breed
+   * Load image for a specific breed with strict concurrency locks
+   * and breed invariance guarantee.
    */
-  const loadBreedImage = useCallback(async (breed: BreedOption) => {
-    if (!breed) return;
+  const loadBreedImage = useCallback(async (targetBreed: BreedOption, isNewFetch = false) => {
+    if (!targetBreed || isRequestInProgressRef.current) return;
+
+    isRequestInProgressRef.current = true;
     setLoadingImage(true);
     setError(null);
 
     try {
-      const url = await fetchRandomDogImage(breed.apiPath);
-      // Double check that user hasn't switched to a different breed while request was in-flight
-      if (activeBreedRef.current?.id === breed.id) {
+      // Dog CEO API endpoint for the exact selected breed path
+      const url = await fetchRandomDogImage(targetBreed.apiPath);
+
+      // Verify that the user did not switch breeds while this fetch was pending
+      if (activeBreedRef.current?.id === targetBreed.id) {
         setImageUrl(url);
+        if (isNewFetch) {
+          setPhotosFetchedForBreed((prev) => prev + 1);
+        } else {
+          setPhotosFetchedForBreed(1);
+        }
       }
-    } catch {
-      if (activeBreedRef.current?.id === breed.id) {
-        setError("Oops! We couldn't find a photo right now. Please try again.");
+    } catch (err) {
+      if (activeBreedRef.current?.id === targetBreed.id) {
+        const errorMsg =
+          err instanceof Error
+            ? err.message
+            : "Oops! We couldn't find a photo right now. Please try again.";
+        setError(errorMsg);
       }
     } finally {
-      if (activeBreedRef.current?.id === breed.id) {
+      if (activeBreedRef.current?.id === targetBreed.id) {
         setLoadingImage(false);
       }
+      isRequestInProgressRef.current = false;
     }
   }, []);
 
@@ -65,17 +83,21 @@ export const DogExplorer: React.FC = () => {
         setBreeds(breedList);
 
         if (breedList.length > 0) {
-          // Default to Shih Tzu if available (prompt highlights Shih Tzu testing), or first breed
+          // Select Shih Tzu by default to fulfill prompt emphasis, or first breed
           const defaultBreed =
             breedList.find((b) => b.id === 'shihtzu') || breedList[0];
 
           setSelectedBreedId(defaultBreed.id);
           activeBreedRef.current = defaultBreed;
-          await loadBreedImage(defaultBreed);
+          await loadBreedImage(defaultBreed, false);
         }
-      } catch {
+      } catch (err) {
         if (isMounted) {
-          setError('Failed to load dog breeds list from Dog CEO API. Please check your internet connection.');
+          const msg =
+            err instanceof Error
+              ? err.message
+              : 'Failed to load dog breeds list from Dog CEO API.';
+          setError(msg);
         }
       } finally {
         if (isMounted) {
@@ -95,21 +117,27 @@ export const DogExplorer: React.FC = () => {
    * Handler when user selects a different breed from dropdown
    */
   const handleSelectBreed = (breedId: string) => {
+    // If request is in progress or same breed clicked, handle gracefully
+    if (breedId === selectedBreedId) return;
+
     const breed = breeds.find((b) => b.id === breedId);
     if (!breed) return;
 
+    // Reset photo counter for new breed
+    setPhotosFetchedForBreed(1);
     setSelectedBreedId(breed.id);
     activeBreedRef.current = breed;
-    loadBreedImage(breed);
+    loadBreedImage(breed, false);
   };
 
   /**
-   * Handler for fetching another photo of the CURRENTLY selected breed
+   * CRITICAL REQUIREMENT:
+   * When Fetch Another Photo is clicked, it MUST fetch another random photo
+   * of the currently selected breed. The selected breed MUST NOT change!
    */
   const handleFetchAnotherPhoto = () => {
-    if (!currentBreed || loadingImage) return;
-    // CRITICAL: Ensure the selected breed remains unchanged!
-    loadBreedImage(currentBreed);
+    if (!currentBreed || loadingImage || isRequestInProgressRef.current) return;
+    loadBreedImage(currentBreed, true);
   };
 
   return (
@@ -135,7 +163,7 @@ export const DogExplorer: React.FC = () => {
             breeds={breeds}
             selectedBreedId={selectedBreedId}
             onSelectBreed={handleSelectBreed}
-            disabled={loadingBreeds}
+            disabled={loadingBreeds || loadingImage}
           />
         </div>
 
@@ -145,24 +173,39 @@ export const DogExplorer: React.FC = () => {
           breedName={currentBreed ? currentBreed.displayName : ''}
           loading={loadingImage || loadingBreeds}
           error={error}
-          onRetry={() => currentBreed && loadBreedImage(currentBreed)}
+          onRetry={() => currentBreed && loadBreedImage(currentBreed, false)}
         />
 
         {/* Fetch Button Action Row */}
         <div className="explorer-action-row">
-          <button
-            type="button"
-            className="btn-primary fetch-photo-button"
-            onClick={handleFetchAnotherPhoto}
-            disabled={loadingImage || loadingBreeds || !selectedBreedId}
-            aria-label={`Fetch another photo of ${currentBreed ? currentBreed.displayName : 'the selected breed'}`}
-          >
-            <RefreshCw size={20} className={loadingImage ? 'spin-star' : ''} />
-            <span>Fetch Another Photo</span>
-          </button>
-          <p className="fetch-indicator-note">
-            Fetches a new random image of <strong>{currentBreed ? currentBreed.displayName : 'your chosen breed'}</strong>
-          </p>
+          <div className="fetch-button-container">
+            <button
+              type="button"
+              className="btn-primary fetch-photo-button"
+              onClick={handleFetchAnotherPhoto}
+              disabled={loadingImage || loadingBreeds || !selectedBreedId}
+              aria-label={`Fetch another photo of ${currentBreed ? currentBreed.displayName : 'the selected breed'}`}
+            >
+              <RefreshCw
+                size={20}
+                className={loadingImage ? 'spin-star' : 'fetch-icon-bounce'}
+              />
+              <span>{loadingImage ? 'Fetching Cutie...' : 'Fetch Another Photo'}</span>
+              <Bone size={18} className="fetch-bone-icon" />
+            </button>
+          </div>
+
+          <div className="fetch-status-indicators">
+            <span className="badge-pill pink photo-counter-badge">
+              <Camera size={13} />
+              <span>
+                {currentBreed ? currentBreed.displayName : 'Breed'} Photo #{photosFetchedForBreed}
+              </span>
+            </span>
+            <p className="fetch-indicator-note">
+              Selected breed stays strictly locked to <strong>{currentBreed ? currentBreed.displayName : 'your chosen breed'}</strong>
+            </p>
+          </div>
         </div>
       </div>
     </section>

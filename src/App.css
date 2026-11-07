@@ -1104,14 +1104,50 @@
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
+  gap: 14px;
+  width: 100%;
+}
+
+.fetch-button-container {
+  display: flex;
+  justify-content: center;
   width: 100%;
 }
 
 .fetch-photo-button {
-  width: min(100%, 340px);
-  padding: 15px 32px;
-  font-size: 17px;
+  width: min(100%, 360px);
+  padding: 16px 32px;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+}
+
+.fetch-bone-icon {
+  color: var(--color-butter-yellow);
+  filter: drop-shadow(1.5px 1.5px 0px var(--color-outline));
+  transition: transform var(--transition-fast);
+}
+
+.fetch-photo-button:hover:not(:disabled) .fetch-bone-icon {
+  transform: rotate(20deg) scale(1.15);
+}
+
+.fetch-icon-bounce {
+  animation: float-subtle 2s ease-in-out infinite;
+}
+
+.fetch-status-indicators {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+.photo-counter-badge {
+  font-size: 12px;
+  padding: 5px 14px;
 }
 
 .fetch-indicator-note {
